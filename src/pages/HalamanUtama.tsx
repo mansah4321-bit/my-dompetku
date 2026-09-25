@@ -557,9 +557,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
         }
       });
 
-      // Realtime listener Supabase: Kapasitas Total & Budget otomatis sama di semua perangkat
+      // Realtime listener Supabase: Kapasitas Total, Budget & Transaksi otomatis sama di semua perangkat
       const channel = supabase
-        .channel(`realtime_settings_${userId}`)
+        .channel(`realtime_all_${userId}`)
         .on(
           'postgres_changes',
           {
@@ -585,6 +585,18 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
           },
           () => {
             fetchBudgets(userId);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'transactions',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            fetchTransactions(userId);
           }
         )
         .subscribe();
