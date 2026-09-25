@@ -599,6 +599,20 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             fetchTransactions(userId);
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_profiles',
+            filter: `id=eq.${userId}`,
+          },
+          () => {
+            fetchUserAvatarFromSupabase(userId).then((cloudAvatar) => {
+              if (cloudAvatar) setUserAvatar(cloudAvatar);
+            });
+          }
+        )
         .subscribe();
 
       return () => {
