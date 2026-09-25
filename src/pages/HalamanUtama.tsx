@@ -432,6 +432,102 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
     }
   };
 
+  // Helper sync menyeluruh ke Supabase user_settings (memastikan 100% sync HP & Laptop untuk transaksi, kategori, tabungan & kapasitas)
+  const syncAllUserDataToSupabase = async (
+    uid: string,
+    data: {
+      transactions?: TransactionItem[];
+      savingsGoals?: SavingsGoal[];
+      incomeCategories?: string[];
+      expenseCategories?: string[];
+      categorySubcategories?: Record<string, string[]>;
+      customOverallBudget?: number | null;
+    }
+  ) => {
+    if (!uid || uid === 'guest') return;
+    try {
+      const payload: Record<string, any> = {
+        user_id: uid,
+        updated_at: new Date().toISOString(),
+      };
+      if (data.transactions !== undefined) {
+        payload.transactions_data = JSON.stringify(data.transactions);
+      }
+      if (data.savingsGoals !== undefined) {
+        payload.savings_data = JSON.stringify(data.savingsGoals);
+      }
+      if (data.incomeCategories !== undefined) {
+        payload.income_categories_data = JSON.stringify(data.incomeCategories);
+      }
+      if (data.expenseCategories !== undefined) {
+        payload.expense_categories_data = JSON.stringify(data.expenseCategories);
+      }
+      if (data.categorySubcategories !== undefined) {
+        payload.subcategories_data = JSON.stringify(data.categorySubcategories);
+      }
+      if (data.customOverallBudget !== undefined) {
+        payload.budget_capacity = data.customOverallBudget;
+      }
+
+      await supabase.from('user_settings').upsert(payload, { onConflict: 'user_id' });
+    } catch {
+      // Non-blocking
+    }
+  };
+
+  const fetchUserSettingsFromSupabase = async (uid: string) => {
+    if (!uid || uid === 'guest') return;
+    try {
+      const { data } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', uid)
+        .maybeSingle();
+
+      if (data) {
+        if (data.budget_capacity !== undefined && data.budget_capacity !== null) {
+          setCustomOverallBudget(Number(data.budget_capacity));
+        }
+
+        if (data.savings_data) {
+          try {
+            const parsed = typeof data.savings_data === 'string' ? JSON.parse(data.savings_data) : data.savings_data;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setSavingsGoals(parsed);
+            }
+          } catch {}
+        }
+
+        if (data.income_categories_data) {
+          try {
+            const parsed = typeof data.income_categories_data === 'string' ? JSON.parse(data.income_categories_data) : data.income_categories_data;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setIncomeCategories(parsed);
+            }
+          } catch {}
+        }
+
+        if (data.expense_categories_data) {
+          try {
+            const parsed = typeof data.expense_categories_data === 'string' ? JSON.parse(data.expense_categories_data) : data.expense_categories_data;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setExpenseCategories(parsed);
+            }
+          } catch {}
+        }
+
+        if (data.subcategories_data) {
+          try {
+            const parsed = typeof data.subcategories_data === 'string' ? JSON.parse(data.subcategories_data) : data.subcategories_data;
+            if (parsed && typeof parsed === 'object') {
+              setCategorySubcategories(parsed);
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+  };
+
   // Ambil transaksi milik user yang sedang login dari Supabase Database
   const fetchTransactions = async (uid: string) => {
     if (!uid || uid === 'guest') {
@@ -460,7 +556,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
         setTimeout(() => resolve({ data: null, error: 'timeout' }), 3000)
       );
 
-      // 1. Coba query dengan filter user_id
+      // 1. Coba query dengan filter user_id dari tabel transactions
       const query1: any = await Promise.race([
         supabase.from('transactions').select('*').eq('user_id', uid),
         timeoutPromise
@@ -478,6 +574,47 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
         if (!query2.error && query2.data) {
           fetchedRows = query2.data.filter((row: any) => !row.user_id || row.user_id === uid);
         }
+      }
+
+      // 3. Cadangan query dari user_settings jika ada
+      try {
+        const { data: settingsData } = await supabase
+          .from('user_settings')
+          .select('transactions_data')
+          .eq('user_id', uid)
+          .maybeSingle();
+
+        if (settingsData && settingsData.transactions_data) {
+          let parsedTx: any[] = [];
+          if (typeof settingsData.transactions_data === 'string') {
+            try {
+              parsedTx = JSON.parse(settingsData.transactions_data);
+            } catch {}
+          } else if (Array.isArray(settingsData.transactions_data)) {
+            parsedTx = settingsData.transactions_data;
+          }
+
+          if (parsedTx.length > 0) {
+            const existingIds = new Set((fetchedRows || []).map((r: any) => String(r.id)));
+            for (const item of parsedTx) {
+              if (item && item.id && !existingIds.has(String(item.id))) {
+                if (!fetchedRows) fetchedRows = [];
+                fetchedRows.push({
+                  id: item.id,
+                  type: item.type,
+                  description: item.description || item.title,
+                  category: item.category,
+                  sub_category: item.subCategory,
+                  amount: item.amount,
+                  date: item.date,
+                  notes: item.notes,
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // Optional
       }
 
       if (fetchedRows && Array.isArray(fetchedRows)) {
@@ -549,6 +686,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
     if (userId && userId !== 'guest') {
       fetchTransactions(userId);
       fetchBudgets(userId);
+      fetchUserSettingsFromSupabase(userId);
 
       // Ambil foto profil terbaru dari Supabase Server (Auth Metadata + Database Cloud)
       fetchUserAvatarFromSupabase(userId).then((cloudAvatar) => {
@@ -568,9 +706,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             table: 'user_settings',
           },
           (payload: any) => {
-            if (payload?.new && (payload.new.user_id === userId || !payload.new.user_id) && payload.new.budget_capacity !== undefined) {
-              const cap = payload.new.budget_capacity !== null ? Number(payload.new.budget_capacity) : null;
-              setCustomOverallBudget(cap);
+            if (payload?.new && (payload.new.user_id === userId || !payload.new.user_id)) {
+              fetchUserSettingsFromSupabase(userId);
+              fetchTransactions(userId);
             }
           }
         )
@@ -619,7 +757,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
     }
   }, [userId, session]);
 
-  // Simpan otomatis transaksi & kategori ke localStorage khusus akun yang sedang login
+  // Simpan otomatis transaksi & kategori ke localStorage khusus akun yang sedang login & Supabase Cloud
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -629,9 +767,11 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
     } catch (e) {
       console.error(e);
     }
+    if (userId && userId !== 'guest') {
+      syncAllUserDataToSupabase(userId, { transactions });
+    }
   }, [transactions, userId]);
 
-  // Simpan otomatis kategori & tabungan ke localStorage khusus akun yang sedang login
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -640,6 +780,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
       );
     } catch (e) {
       console.error(e);
+    }
+    if (userId && userId !== 'guest') {
+      syncAllUserDataToSupabase(userId, { incomeCategories });
     }
   }, [incomeCategories, userId]);
 
@@ -652,6 +795,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
     } catch (e) {
       console.error(e);
     }
+    if (userId && userId !== 'guest') {
+      syncAllUserDataToSupabase(userId, { expenseCategories });
+    }
   }, [expenseCategories, userId]);
 
   useEffect(() => {
@@ -663,6 +809,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
     } catch (e) {
       console.error(e);
     }
+    if (userId && userId !== 'guest') {
+      syncAllUserDataToSupabase(userId, { categorySubcategories });
+    }
   }, [categorySubcategories, userId]);
 
   useEffect(() => {
@@ -673,6 +822,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
       );
     } catch (e) {
       console.error(e);
+    }
+    if (userId && userId !== 'guest') {
+      syncAllUserDataToSupabase(userId, { savingsGoals });
     }
   }, [savingsGoals, userId]);
 
@@ -697,6 +849,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
       }
     } catch (e) {
       console.error(e);
+    }
+    if (userId && userId !== 'guest') {
+      syncAllUserDataToSupabase(userId, { customOverallBudget });
     }
   }, [customOverallBudget, userId]);
 
@@ -1329,28 +1484,26 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
   const handleDeleteTransaction = async (id: string) => {
     const currentUserId = session?.user?.id;
 
-    if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
-      return;
-    }
+    // Direct deletion without window.confirm (yang terblokir di lingkungan iframe)
+    const nextTransactions = transactions.filter((t) => t.id !== id);
+    setTransactions(nextTransactions);
 
-    // Update state & storage instan
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
     if (editingTransaction?.id === id) {
       setEditingTransaction(null);
     }
     soundService.playDelete();
-    setToastMessage('Berhasil');
+    setToastMessage('Transaksi berhasil dihapus');
     setTimeout(() => setToastMessage(null), 2500);
 
     // Sync Supabase di background
     if (currentUserId && currentUserId !== 'guest') {
+      syncAllUserDataToSupabase(currentUserId, { transactions: nextTransactions });
       (async () => {
         try {
           await supabase
             .from('transactions')
             .delete()
-            .eq('id', id)
-            .eq('user_id', currentUserId);
+            .eq('id', id);
         } catch (err) {
           console.warn('Background delete transaction warning:', err);
         }
@@ -1988,7 +2141,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
                     </div>
                     <div>
                       <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                        Diagram Alokasi
+                        Diagram Transaksi
                       </h3>
                     </div>
                   </div>
