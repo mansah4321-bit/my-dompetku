@@ -480,7 +480,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
         }
       }
 
-      if (fetchedRows && Array.isArray(fetchedRows) && fetchedRows.length > 0) {
+      if (fetchedRows && Array.isArray(fetchedRows)) {
         const mapped: TransactionItem[] = fetchedRows.map((row: any) => {
           let parsedNotes = row.notes || undefined;
           let parsedSubCategory = row.sub_category || row.subcategory || undefined;
@@ -557,7 +557,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
         }
       });
 
-      // Realtime listener Supabase: Kapasitas Total, Budget & Transaksi otomatis sama di semua perangkat
+      // Realtime listener Supabase: Bebas filter RLS kaku agar broadcast event langsung diterima seluruh device (HP & Laptop)
       const channel = supabase
         .channel(`realtime_all_${userId}`)
         .on(
@@ -566,10 +566,9 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             event: '*',
             schema: 'public',
             table: 'user_settings',
-            filter: `user_id=eq.${userId}`,
           },
           (payload: any) => {
-            if (payload?.new && payload.new.budget_capacity !== undefined) {
+            if (payload?.new && (payload.new.user_id === userId || !payload.new.user_id) && payload.new.budget_capacity !== undefined) {
               const cap = payload.new.budget_capacity !== null ? Number(payload.new.budget_capacity) : null;
               setCustomOverallBudget(cap);
             }
@@ -581,7 +580,6 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             event: '*',
             schema: 'public',
             table: 'budgets',
-            filter: `user_id=eq.${userId}`,
           },
           () => {
             fetchBudgets(userId);
@@ -593,7 +591,6 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             event: '*',
             schema: 'public',
             table: 'transactions',
-            filter: `user_id=eq.${userId}`,
           },
           () => {
             fetchTransactions(userId);
@@ -605,7 +602,6 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             event: '*',
             schema: 'public',
             table: 'user_profiles',
-            filter: `id=eq.${userId}`,
           },
           () => {
             fetchUserAvatarFromSupabase(userId).then((cloudAvatar) => {
@@ -1209,29 +1205,48 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
             insertPayload.category_id = resolvedCatId;
           }
 
-          const insertPromise = supabase
+          let insertResult: any = await supabase
             .from('transactions')
             .insert([insertPayload])
             .select()
             .single();
 
-          const timeoutPromise = new Promise<any>((resolve) =>
-            setTimeout(() => resolve({ error: { message: 'Timeout background sync' } }), 4000)
-          );
+          if (insertResult.error) {
+            // Fallback 1: Jika error akibat FK constraint atau kolom sub_category/wallet_id
+            const fallbackPayload1: Record<string, any> = {
+              user_id: currentUserId,
+              description: txName,
+              amount: parsedAmount,
+              type: addModalType,
+              category: finalCategory,
+              date: transactionDate,
+              notes: transactionNotes,
+            };
 
-          let insertResult: any = await Promise.race([insertPromise, timeoutPromise]);
+            insertResult = await supabase
+              .from('transactions')
+              .insert([fallbackPayload1])
+              .select()
+              .single();
+          }
 
-          if (insertResult.error && insertResult.error.code === 'PGRST204') {
-            const errorMsgLower = (insertResult.error.message || '').toLowerCase();
-            if (errorMsgLower.includes('description')) {
-              const payloadTitle: Record<string, any> = { ...insertPayload, title: txName };
-              delete payloadTitle.description;
-              insertResult = await supabase
-                .from('transactions')
-                .insert([payloadTitle])
-                .select()
-                .single();
-            }
+          if (insertResult.error) {
+            // Fallback 2: Jika kolom bernama 'title' alih-alih 'description'
+            const fallbackPayload2: Record<string, any> = {
+              user_id: currentUserId,
+              title: txName,
+              amount: parsedAmount,
+              type: addModalType,
+              category: finalCategory,
+              date: transactionDate,
+              notes: transactionNotes,
+            };
+
+            insertResult = await supabase
+              .from('transactions')
+              .insert([fallbackPayload2])
+              .select()
+              .single();
           }
 
           if (insertResult.data?.id) {
