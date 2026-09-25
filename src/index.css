@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  /* Khusus font angka finansial agar sangat jelas, tegas, dan mudah dibaca */
+  .font-num {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Ensure all numbers in financial tables/cards are tabular */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Interaktif: Gerakan Ikon dan Efek Halus */
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes subtlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+@keyframes subtleWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+  60% { transform: translateY(-2px); }
+}
+
+@keyframes iconGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(223, 183, 108, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 14px 4px rgba(223, 183, 108, 0.25);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes alertShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px) rotate(-4deg); }
+  40%, 80% { transform: translateX(3px) rotate(4deg); }
+}
+
+@keyframes smoothExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-icon-float {
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+.animate-icon-pulse {
+  animation: subtlePulse 2.2s ease-in-out infinite;
+}
+
+.animate-icon-wiggle {
+  animation: subtleWiggle 3s ease-in-out infinite;
+}
+
+.animate-icon-bounce {
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+.animate-icon-glow {
+  animation: iconGlowPulse 2.8s ease-in-out infinite;
+}
+
+.animate-alert-shake {
+  animation: alertShake 2.5s ease-in-out infinite;
+}
+
+.animate-expand {
+  animation: smoothExpand 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

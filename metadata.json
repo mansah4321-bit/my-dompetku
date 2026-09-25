@@ -1,0 +1,6 @@
+{
+  "name": "MYDOMPET by Firmansah",
+  "description": "Aplikasi pengelolaan keuangan pribadi modern, bersih, dan profesional untuk mencatat pemasukan, pengeluaran, anggaran, dan laporan keuangan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
