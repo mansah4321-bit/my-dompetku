@@ -3230,7 +3230,7 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
 
         {/* ========================================================
             BOTTOM NAVIGATION (BERANDA, TRANSAKSI, TABUNGAN, ANGGARAN)
-            * Ikon beranimasi halus saat diklik/aktif
+            * Tampilan bersih tanpa kotak latar belakang saat aktif
            ======================================================== */}
         <nav className="fixed bottom-0 max-w-md w-full z-40 bg-[#080E1E]/95 backdrop-blur-2xl border-t border-white/[0.08] px-4 py-2 shadow-2xl">
           <div className="grid grid-cols-4 gap-1">
@@ -3239,20 +3239,18 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
               type="button"
               data-sound="tab"
               onClick={() => setActiveTab('beranda')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all cursor-pointer ${
+              className={`flex flex-col items-center justify-center py-2 px-1 transition-all cursor-pointer ${
                 activeTab === 'beranda'
                   ? 'text-[#DFB76C]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${
-                  activeTab === 'beranda'
-                    ? 'bg-[#DFB76C]/15 shadow-md shadow-[#DFB76C]/20 scale-110'
-                    : 'hover:scale-105 active:scale-95'
+                className={`transition-all duration-300 ${
+                  activeTab === 'beranda' ? 'scale-110' : 'hover:scale-105 active:scale-95'
                 }`}
               >
-                <Home size={18} strokeWidth={activeTab === 'beranda' ? 2.5 : 2} />
+                <Home size={20} strokeWidth={activeTab === 'beranda' ? 2.5 : 2} />
               </div>
               <span className="text-[10px] font-bold tracking-tight mt-1">Beranda</span>
             </button>
@@ -3262,20 +3260,18 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
               type="button"
               data-sound="tab"
               onClick={() => setActiveTab('transaksi')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all cursor-pointer ${
+              className={`flex flex-col items-center justify-center py-2 px-1 transition-all cursor-pointer ${
                 activeTab === 'transaksi'
                   ? 'text-[#DFB76C]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${
-                  activeTab === 'transaksi'
-                    ? 'bg-[#DFB76C]/15 shadow-md shadow-[#DFB76C]/20 scale-110'
-                    : 'hover:scale-105 active:scale-95'
+                className={`transition-all duration-300 ${
+                  activeTab === 'transaksi' ? 'scale-110' : 'hover:scale-105 active:scale-95'
                 }`}
               >
-                <Receipt size={18} strokeWidth={activeTab === 'transaksi' ? 2.5 : 2} />
+                <Receipt size={20} strokeWidth={activeTab === 'transaksi' ? 2.5 : 2} />
               </div>
               <span className="text-[10px] font-bold tracking-tight mt-1">Transaksi</span>
             </button>
@@ -3285,47 +3281,39 @@ export const HalamanUtama: React.FC<HalamanUtamaProps> = ({ session, onLogout })
               type="button"
               data-sound="tab"
               onClick={() => setActiveTab('tabungan')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all cursor-pointer ${
+              className={`flex flex-col items-center justify-center py-2 px-1 transition-all cursor-pointer ${
                 activeTab === 'tabungan'
                   ? 'text-[#DFB76C]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${
-                  activeTab === 'tabungan'
-                    ? 'bg-[#DFB76C]/15 shadow-md shadow-[#DFB76C]/20 scale-110'
-                    : 'hover:scale-105 active:scale-95'
+                className={`transition-all duration-300 ${
+                  activeTab === 'tabungan' ? 'scale-110' : 'hover:scale-105 active:scale-95'
                 }`}
               >
-                <Wallet size={18} strokeWidth={activeTab === 'tabungan' ? 2.5 : 2} />
+                <Wallet size={20} strokeWidth={activeTab === 'tabungan' ? 2.5 : 2} />
               </div>
               <span className="text-[10px] font-bold tracking-tight mt-1">Tabungan</span>
             </button>
 
-            {/* 4. Anggaran (Di Samping Navigasi Tabungan) */}
+            {/* 4. Anggaran */}
             <button
               type="button"
               data-sound="tab"
               onClick={() => setActiveTab('anggaran')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all cursor-pointer ${
+              className={`flex flex-col items-center justify-center py-2 px-1 transition-all cursor-pointer ${
                 activeTab === 'anggaran'
                   ? 'text-[#DFB76C]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <div
-                className={`p-1.5 rounded-xl transition-all duration-300 ${
-                  activeTab === 'anggaran'
-                    ? 'bg-[#DFB76C]/15 shadow-md shadow-[#DFB76C]/20 scale-110 animate-icon-glow'
-                    : 'hover:scale-105 active:scale-95'
+                className={`transition-all duration-300 ${
+                  activeTab === 'anggaran' ? 'scale-110' : 'hover:scale-105 active:scale-95'
                 }`}
               >
-                <Target
-                  size={18}
-                  strokeWidth={activeTab === 'anggaran' ? 2.5 : 2}
-                  className={activeTab === 'anggaran' ? 'animate-icon-float' : ''}
-                />
+                <Target size={20} strokeWidth={activeTab === 'anggaran' ? 2.5 : 2} />
               </div>
               <span className="text-[10px] font-bold tracking-tight mt-1">Anggaran</span>
             </button>
